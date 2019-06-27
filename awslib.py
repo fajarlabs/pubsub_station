@@ -21,7 +21,6 @@ class AwsLib :
         self.port = port
         self.message = message
 
-    def connect(self) :
         try :
             # Init AWSIoTMQTTClient
             self.myAWSIoTMQTTClient = AWSIoTMQTTClient(self.clientId)
@@ -33,14 +32,25 @@ class AwsLib :
             self.myAWSIoTMQTTClient.configureDrainingFrequency(2)  # Draining: 2 Hz
             self.myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
             self.myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
+
+        except Exception as e :
+            print(e)
+
+    def connect(self) :
+        try :
             self.myAWSIoTMQTTClient.connect()
+        except Exception as e :
+            print(e)
+
+    def disconnect(self) :
+        try :
+            self.myAWSIoTMQTTClient.disconnect()
         except Exception as e :
             print(e)
 
     def subscribe(self, topic) :
         try :
             self.myAWSIoTMQTTClient.subscribe(topic, 1, self.receiveCallback)
-            # save to DB here
         except Exception as e :
             print(e)
 
@@ -51,6 +61,7 @@ class AwsLib :
             print(e)
 
     # Custom MQTT message callback
+    # Save to Database
     def receiveCallback(self, client, userdata, message):
         print("Received a new message: ")
         print(message.payload)
