@@ -19,14 +19,12 @@ CONFIG_ROOT = "account/root-CA.crt"
 CONFIG_CERT = "account/device-98f44a5b-edf0-4a0b-8e89-c0e33a77847d.cert.pem"
 CONFIG_PKEY = "account/device-98f44a5b-edf0-4a0b-8e89-c0e33a77847d.private.key" 
 CONFIG_PORT = 443
-CONFIG_CLIENTID = "basicPubSub"
-CONFIG_TOPIC = "topic/test/python"
-CONFIG_MESSAGE = "HELLO WORLD!"
+CONFIG_CLIENTID = "SecureIOTPubSub"
 
 # Check signal healt
 CONFIG_TOPIC_MONITOR = "signal/healt/server"
 CONFIG_RECONNECT_INTERVAL = 60 # seconds
-AWS_SERVER = AwsLib(CONFIG_CLIENTID, CONFIG_HOST, CONFIG_PORT, CONFIG_ROOT, CONFIG_CERT, CONFIG_PKEY, CONFIG_MESSAGE)
+AWS_SERVER = AwsLib(CONFIG_CLIENTID, CONFIG_HOST, CONFIG_PORT, CONFIG_ROOT, CONFIG_CERT, CONFIG_PKEY)
 
 # Flag check if MQTT is connected
 is_connect = False

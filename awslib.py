@@ -12,14 +12,13 @@ class AwsLib :
     port = None
     myAWSIoTMQTTClient = None
 
-    def __init__(self, clientId, hostName, port, rootCert, certKey, privKey, message) :
+    def __init__(self, clientId, hostName, port, rootCert, certKey, privKey) :
         self.clientId = clientId
         self.hostName = hostName
         self.rootCert = rootCert
         self.certKey = certKey
         self.privKey = privKey
         self.port = port
-        self.message = message
 
         try :
             # Init AWSIoTMQTTClient
