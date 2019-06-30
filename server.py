@@ -9,6 +9,7 @@ from awslib import AwsLib
 from bottle import route, run, template, request, response
 import schedule
 from threading import Thread
+from postgredb import myQuery
 
 # ===============================================================================================
 # AWS MQTT CONFIGURATION AND INITIALIZE
@@ -23,24 +24,52 @@ CONFIG_CLIENTID = "SecureIOTPubSub"
 
 # Check signal healt
 CONFIG_TOPIC_MONITOR = "signal/healt/server"
-CONFIG_RECONNECT_INTERVAL = 60 # seconds
+CONFIG_TOPIC_DATA = "signal/device/data"
+CONFIG_CHECK_RECONNECT = 1 # in seconds
+CONFIG_CHECK_SUBSCRIBE = 1 # in seconds
+# (clientId, hostName, rootCert, certKey, privKey, port, topic, message)	
 AWS_SERVER = AwsLib(CONFIG_CLIENTID, CONFIG_HOST, CONFIG_PORT, CONFIG_ROOT, CONFIG_CERT, CONFIG_PKEY)
 
-# Flag check if MQTT is connected
-is_connect = False
-
 # Refresh AWS pub-sub connection in 60 seconds
-def check_pubsub() :
-	global is_connect
-	AWS_SERVER.disconnect()
-	# Set is connect to False for disconnect
-	is_connect = False
-	# Connecting again..
-	AWS_SERVER.connect()
-	AWS_SERVER.publish(CONFIG_TOPIC_MONITOR, "{\"status\":\"ok\"}")
-	# Set info is connected
-	is_connect = True
-	print('MQTT Connected...')
+def connection_check() :
+	if (AWS_SERVER.getInfoStatus() == False) :
+		AWS_SERVER.disconnect()
+		print('MQTT Reconnecting...')
+		AWS_SERVER.connect()
+		AWS_SERVER.publish(CONFIG_TOPIC_MONITOR, "{\"message\":\"ok\"}")
+		print('MQTT Connected...')
+
+def _callback(client, userdata, message):
+	data = ''
+	topic = ''
+	try :
+		b = message.payload
+		json_data = json.loads(b.decode('utf-8'))
+		data = json_data["message"]
+	except Exception as e_payload :
+		print(e_payload)
+
+	try :
+		topic = message.topic
+	except Exception as e_topic :
+		print(e_topic)
+
+	myQuery("\
+		INSERT INTO \"MQTT_DATA\" (\"MQTT_DEVICE_TOPIC\",\"MQTT_DEVICE_DATA\") \
+		VALUES ('"+topic+"','"+data+"')")
+
+
+def subscribe_check() :
+	if AWS_SERVER.getInfoStatus() :
+		AWS_SERVER.subscribe(CONFIG_TOPIC_MONITOR, _callback)
+		devices = myQuery("SELECT \"MQTT_DEVICE_TOPIC\" FROM \"MQTT_DEVICE\" WHERE \"IS_SUBSCRIBE\" = 'Y' ","FETCHALL")
+		if (len(devices) > 0) :
+			for t in devices :
+				AWS_SERVER.subscribe(t[0], _callback)
+		else :
+			print('No data devices found!')
+	else :
+		print('Subscribing is fail, because not connected to aws.')
 
 def run_schedule():
 	while True:
@@ -48,14 +77,11 @@ def run_schedule():
 		time.sleep(1)
 
 # Check pubsub every 60 seconds
-schedule.every(CONFIG_RECONNECT_INTERVAL).seconds.do(check_pubsub)
+schedule.every(CONFIG_CHECK_RECONNECT).seconds.do(connection_check)
+schedule.every(CONFIG_CHECK_SUBSCRIBE).seconds.do(subscribe_check)
 t = Thread(target=run_schedule)
 t.daemon = True
 t.start()
-
-# (clientId, hostName, rootCert, certKey, privKey, port, topic, message)
-AWS_SERVER.connect()
-is_connect = True
 
 # ===============================================================================================
 # CONTROLLER BOTTLE
@@ -68,12 +94,11 @@ def index():
 
 @route('/publish', method='POST')
 def publish():
-	global is_connect
 	topic = request.forms.get('topic')
 	message = request.forms.get('message')
 	rv = None
-	if (is_connect) :
-		AWS_SERVER.publish(topic, message)
+	if (AWS_SERVER.getInfoStatus()) :
+		AWS_SERVER.publish(topic, {"message":message})
 		rv = { "status":"ok", "description":"Publish OK" }
 	else :
 		rv = { "status":"failed", "description":"MQTT reconnect to server" }
@@ -83,9 +108,8 @@ def publish():
 
 @route('/disconnect', method='GET')
 def disconnect():
-	global is_connect
 	rv = None
-	if (is_connect) :
+	if (AWS_SERVER.getInfoStatus()) :
 		AWS_SERVER.disconnect()
 		rv = { "status":"ok", "description":"Disconnect MQTT is OK" }
 	else :
@@ -96,9 +120,8 @@ def disconnect():
 
 @route('/connect', method='GET')
 def connect():
-	global is_connect
 	rv = None
-	if (is_connect) :
+	if AWS_SERVER.getInfoStatus() == False :
 		AWS_SERVER.connect()
 		rv = { "status":"ok", "description":"Connect MQTT is OK" }
 	else :

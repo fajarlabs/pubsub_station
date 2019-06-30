@@ -19,6 +19,7 @@ class AwsLib :
         self.certKey = certKey
         self.privKey = privKey
         self.port = port
+        self.isConnected = False
 
         try :
             # Init AWSIoTMQTTClient
@@ -31,39 +32,41 @@ class AwsLib :
             self.myAWSIoTMQTTClient.configureDrainingFrequency(2)  # Draining: 2 Hz
             self.myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
             self.myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
-
         except Exception as e :
             print(e)
+
+    def getInfoStatus(self) :
+        return self.isConnected
 
     def connect(self) :
-        try :
-            self.myAWSIoTMQTTClient.connect()
-        except Exception as e :
-            print(e)
+        if (self.isConnected == False) :
+            try :
+                self.myAWSIoTMQTTClient.connect()
+                self.isConnected = True
+            except Exception as e :
+                self.isConnected = False
 
     def disconnect(self) :
-        try :
-            self.myAWSIoTMQTTClient.disconnect()
-        except Exception as e :
-            print(e)
+        if self.isConnected :
+            self.isConnected = False
+            try :
+                self.myAWSIoTMQTTClient.disconnect()
+            except Exception as e :
+                print(e)
 
-    def subscribe(self, topic) :
-        try :
-            self.myAWSIoTMQTTClient.subscribe(topic, 1, self.receiveCallback)
-        except Exception as e :
-            print(e)
+    def subscribe(self, topic, callback) :
+        if self.isConnected :
+            try :
+                # self.myAWSIoTMQTTClient.subscribe(topic, 1, self.receiveCallback)
+                self.myAWSIoTMQTTClient.subscribe(topic, 1, callback)
+            except Exception as e :
+                self.isConnected = False
+                print(e)
 
     def publish(self, topic, message) :
-        try :
-            self.myAWSIoTMQTTClient.publish(topic, message, 1)
-        except Exception as e :
-            print(e)
-
-    # Custom MQTT message callback
-    # Save to Database
-    def receiveCallback(self, client, userdata, message):
-        print("Received a new message: ")
-        print(message.payload)
-        print("from topic: ")
-        print(message.topic)
-        print("--------------\n\n")
+        if self.isConnected :
+            try :
+                self.myAWSIoTMQTTClient.publish(topic, message, 1)
+            except Exception as e :
+                self.isConnected = False
+                print(e)
