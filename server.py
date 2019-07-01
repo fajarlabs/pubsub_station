@@ -45,6 +45,7 @@ def _callback(client, userdata, message):
 	try :
 		b = message.payload
 		json_data = json.loads(b.decode('utf-8'))
+		print(b.decode('utf-8')) # debug uncoment to show data
 		data = json_data["message"]
 	except Exception as e_payload :
 		print(e_payload)
@@ -98,7 +99,8 @@ def publish():
 	message = request.forms.get('message')
 	rv = None
 	if (AWS_SERVER.getInfoStatus()) :
-		AWS_SERVER.publish(topic, {"message":message})
+		transmit_json =  '{ "message":"'+message+'" }'
+		AWS_SERVER.publish(topic, transmit_json)
 		rv = { "status":"ok", "description":"Publish OK" }
 	else :
 		rv = { "status":"failed", "description":"MQTT reconnect to server" }

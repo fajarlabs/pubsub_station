@@ -25,14 +25,12 @@ CONFIG_TOPIC = "topic/test/python"
 CONFIG_MESSAGE = "HELLO WORLD!"
 
 # (clientId, hostName, rootCert, certKey, privKey, port, topic, message)
-aws = AwsLib(CONFIG_CLIENTID, CONFIG_HOST, CONFIG_PORT, CONFIG_ROOT, CONFIG_CERT, CONFIG_PKEY, CONFIG_MESSAGE)
+aws = AwsLib(CONFIG_CLIENTID, CONFIG_HOST, CONFIG_PORT, CONFIG_ROOT, CONFIG_CERT, CONFIG_PKEY)
 aws.connect()
 
-schedule.every(1).seconds.do(aws.publish, "signal/humidity/device1", "topic1").tag('a')
-schedule.every(1).seconds.do(aws.publish, "signal/humidity/device2", "topic2").tag('a')
-schedule.every(1).seconds.do(aws.subscribe, "signal/humidity/device3").tag('b')
-
-schedule.clear('a') # clear scheduler using tag
+schedule.every(1).seconds.do(aws.publish, "signal/device/temperature01", "topic1")
+#schedule.every(1).seconds.do(aws.publish, "signal/humidity/device2", "topic2").tag('a')
+#schedule.every(1).seconds.do(aws.subscribe, "signal/humidity/device3").tag('b')
 while True:
     schedule.run_pending()
     time.sleep(1)
